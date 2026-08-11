@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Matemáticas y Geometría - Matías</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+    
+    body { 
+      background-color: #2b2d42; 
+      display: flex; 
+      flex-direction: column;
+      justify-content: center; 
+      align-items: center; 
+      min-height: 100vh; 
+      padding: 10px;
+    }
+
+    /* PESTAÑAS DE NAVEGACIÓN ENTRE AMBAS LÓGICAS */
+    .nav-tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .tab-btn {
+      padding: 10px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      border: 3px solid #2b2d42;
+      border-radius: 20px;
+      background: #8ac926;
+      color: #2b2d42;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #1b2021;
+    }
+
+    .tab-btn.active {
+      background: #ffca3a;
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #1b2021;
+    }
+
+    /* PANTALLA PRINCIPAL */
+    .game-screen { 
+      width: 820px; 
+      height: 520px; 
+      border: 4px solid #2b2d42; 
+      border-radius: 16px; 
+      position: relative; 
+      overflow: hidden; 
+      background: #a2d5f2; 
+      box-shadow: 0 10px 0 rgba(0,0,0,0.3);
+    }
+
+    .sky { height: 55%; position: relative; padding: 20px; }
+    .ground { height: 45%; background: #8ac926; position: relative; border-top: 4px solid #6a994e; }
+    
+    .title-banner { 
+      position: absolute; 
+      top: 15px; 
+      left: 20px; 
+      background: white; 
+      padding: 8px 18px; 
+      border-radius: 12px; 
+      border: 3px solid #2b2d42; 
+      font-size: 18px; 
+      font-weight: bold; 
+      color: #2b2d42; 
+    }
+
+    .btn-pause {
+      position: absolute;
+      top: 15px;
+      right: 20px;
+      background: #ff9f1c;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 12px;
+      border: 3px solid #2b2d42;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #2b2d42;
+      z-index: 10;
+    }
+
+    .rail { position: absolute; bottom: 35px; width: 100%; height: 14px; background: #6c584c; border-top: 4px dashed #403d39; }
+
+    /* ESTACIONALIDAD Y MODOS */
+    .game-mode { display: none; height: 100%; }
+    .game-mode.active { display: block; }
+
+    .options-box {
+      position: absolute;
+      top: 75px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 15px;
+    }
+
+    .card-option {
+      background: white;
+      border: 4px solid #2b2d42;
+      border-radius: 16px;
+      padding: 12px 25px;
+      font-size: 26px;
+      font-weight: bold;
+      color: #2b2d42;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #2b2d42;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-option:active { transform: translateY(4px); box-shadow: 0 2px 0 #2b2d42; }
+
+    /* TREN Y VAGONES ACUMULATIVOS */
+    .train-container { 
+      position: absolute; 
+      bottom: 45px; 
+      left: 30px; 
+      display: flex;
+      align-items: flex-end;
+      transition: left 0.8s ease-in-out;
+    }
+
+    .locomotive {
+      width: 75px;
+      height: 65px;
+      background: #ff595e;
+      border: 3px solid #2b2d42;
+      border-radius: 10px 18px 8px 8px;
+      position: relative;
+    }
+    /* INVERSIÓN HORIZONTAL PARA MIRAR A LA DERECHA */
+    .locomotive::before { 
+      content: '🚂'; 
+      font-size: 38px; 
+      position: absolute; 
+      top: 5px; 
+      left: 12px; 
+      transform: scaleX(-1);
+      display: inline-block;
+    }
+
+    .wagon-group { display: flex; gap: 4px; }
+    /* INVERSIÓN HORIZONTAL PARA QUE EL DINO Y VAGONES MIREN A LA DERECHA */
+    .wagon {
+      width: 50px;
+      height: 45px;
+      background: #118ab2;
+      border: 3px solid #2b2d42;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: white;
+      transform: scaleX(-1);
+    }
+
+    /* ESTACIONALIDAD / META */
+    .station {
+      position: absolute;
+      bottom: 40px;
+      right: 20px;
+      width: 140px;
+      height: 120px;
+      background: #ffca3a;
+      border: 4px solid #2b2d42;
+      border-radius: 16px 16px 0 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 5px;
+    }
+
+    /* ESCARCHA Y CELEBRACIÓN */
+    .sparkles-overlay {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 50;
+    }
+    .sparkle { position: absolute; font-size: 32px; animation: floatSparkle 1.2s infinite alternate ease-in-out; }
+    @keyframes floatSparkle {
+      0% { transform: scale(0.8) translateY(0); opacity: 0.7; }
+      100% { transform: scale(1.3) translateY(-15px); opacity: 1; }
+    }
+
+    .celebration-banner {
+      display: none;
+      position: absolute;
+      top: 130px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #8ac926;
+      border: 4px solid #2b2d42;
+      padding: 12px 25px;
+      border-radius: 20px;
+      font-size: 22px;
+      font-weight: bold;
+      color: #2b2d42;
+      box-shadow: 0 6px 0 #2b2d42;
+      z-index: 60;
+      text-align: center;
+    }
+
+    .btn-next {
+      margin-top: 10px;
+      padding: 8px 20px;
+      background: #ffca3a;
+      border: 3px solid #2b2d42;
+      border-radius: 12px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* PAUSA CALMANTE */
+    .modal-overlay {
+      display: none;
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-card {
+      background: white;
+      border: 4px solid #2b2d42;
+      border-radius: 20px;
+      padding: 25px;
+      text-align: center;
+      max-width: 380px;
+    }
+    .btn-calm-action {
+      margin-top: 15px;
+      padding: 12px 28px;
+      font-size: 28px;
+      background: #ffca3a;
+      border: 3px solid #2b2d42;
+      border-radius: 50px;
+      cursor: pointer;
+      box-shadow: 0 5px 0 #2b2d42;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PESTAÑAS DE NAVEGACIÓN -->
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchMode('mode1', this)">1. Acumulación (+1) 🚃</button>
+    <button class="tab-btn" onclick="switchMode('mode2', this)">2. Patrón Geométrico 🔴▲</button>
+  </div>
+
+  <div class="game-screen">
+    
+    <div class="title-banner" id="banner-title">Matemáticas: Acumulación de Vagones</div>
+    <button class="btn-pause" onclick="openCalmModal()">🛠️ Pausa</button>
+
+    <!-- CELEBRACIÓN TRANSVERSAL -->
+    <div class="celebration-banner" id="celebration-banner">
+      <div id="phrase-text">¡EXCELENTE!</div>
+      <button class="btn-next" onclick="nextRound()">Siguiente ➔</button>
+    </div>
+
+    <!-- ESCARCHA -->
+    <div class="sparkles-overlay" id="sparkles">
+      <span class="sparkle" style="top: 20%; left: 30%;">✨</span>
+      <span class="sparkle" style="top: 40%; left: 70%;">⭐</span>
+      <span class="sparkle" style="top: 60%; left: 40%;">✨</span>
+    </div>
+
+    <!-- OPCIÓN 2: LÓGICA ACUMULATIVA (N + 1) -->
+    <div id="mode1" class="game-mode active">
+      <div class="sky">
+        <div style="text-align: center; font-size: 22px; font-weight: bold; color: #2b2d42; margin-top: 50px;">
+          ¿Cuántos vagones se agregan?
+        </div>
+        <div class="options-box" id="options-mode1" style="top: 100px;"></div>
+      </div>
+      <div class="ground">
+        <div class="rail"></div>
+        <div class="station">
+          <div style="font-size: 38px;" id="target-count-icon">🏁</div>
+          <!-- META CON ÍCONO DE VAGÓN AL LADO DEL NÚMERO -->
+          <div style="font-size: 16px; font-weight: bold;" id="target-count-text">Meta: 4 🚃</div>
+        </div>
+        <div class="train-container" id="train1">
+          <div class="wagon-group" id="wagons-container">
+            <div class="wagon">🦖</div>
+          </div>
+          <div class="locomotive"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPCIÓN 3: LÓGICA PATRÓN GEOMÉTRICO -->
+    <div id="mode2" class="game-mode">
+      <div class="sky">
+        <div style="text-align: center; font-size: 22px; font-weight: bold; color: #2b2d42; margin-top: 50px;">
+          Completa el patrón: <span id="pattern-display" style="font-size: 28px;">🔴 ➔ ▲ ➔ 🔴 ➔ ??</span>
+        </div>
+        <div class="options-box" id="options-mode2" style="top: 105px;"></div>
+      </div>
+      <div class="ground">
+        <div class="rail"></div>
+        <div class="station">
+          <!-- CAMBIO EN MODO GEOMÉTRICO: BANDERA DE META EN LUGAR DE FIGURA GEOMÉTRICA -->
+          <div style="font-size: 38px;">🏁</div>
+          <div style="font-size: 16px; font-weight: bold;">Estación</div>
+        </div>
+        <div class="train-container" id="train2">
+          <div class="wagon-group">
+            <div class="wagon">🦖</div>
+          </div>
+          <div class="locomotive"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAUSA CALMANTE -->
+    <div class="modal-overlay" id="calm-modal">
+      <div class="modal-card">
+        <h2 style="color: #2b2d42; margin-bottom: 8px;">🔧 Estación de Pausa</h2>
+        <p style="font-size: 16px; color: #555;">Pausa de regulación.<br>Presiona la pelota 3 veces para continuar:</p>
+        <button class="btn-calm-action" onclick="pressCalm()">⚽ (<span id="calm-clicks">3</span>)</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let activeMode = 'mode1';
+    let r1Index = 0;
+    let r2Index = 0;
+
+    /* DATOS OPCIÓN 2: ACUMULACIÓN (N + 1) */
+    const rondasMode1 = [
+      { inicio: 1, agrega: 1, meta: 2, opciones: ["+1 🚃", "+3 🚃🚃🚃"] },
+      { inicio: 2, agrega: 1, meta: 3, opciones: ["+2 🚃🚃", "+1 🚃"] },
+      { inicio: 3, agrega: 1, meta: 4, opciones: ["+1 🚃", "+2 🚃🚃"] }
+    ];
+
+    /* DATOS OPCIÓN 3: PATRONES GEOMÉTRICOS */
+    const rondasMode2 = [
+      { secuencia: "🔴 ➔ ▲ ➔ 🔴 ➔ ??", correcta: "▲", opciones: ["▲", "🔴"] },
+      { secuencia: "🟩 ➔ 🟡 ➔ 🟩 ➔ ??", correcta: "🟡", opciones: ["🟦", "🟡"] },
+      { secuencia: "⭐ ➔ 🟦 ➔ ⭐ ➔ ??", correcta: "🟦", opciones: ["🟦", "⭐"] }
+    ];
+
+    function switchMode(modeId, btn) {
+      activeMode = modeId;
+      document.querySelectorAll('.game-mode').forEach(m => m.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(modeId).classList.add('active');
+      btn.classList.add('active');
+
+      document.getElementById('celebration-banner').style.display = 'none';
+      document.getElementById('sparkles').style.display = 'none';
+
+      if(modeId === 'mode1') {
+        document.getElementById('banner-title').innerText = "Matemáticas: Acumulación de Vagones";
+        loadMode1();
+      } else {
+        document.getElementById('banner-title').innerText = "Geometría: Patrón de Formas";
+        loadMode2();
+      }
+    }
+
+    /* MODO 1: LÓGICA DE ACUMULACIÓN */
+    function loadMode1() {
+      const data = rondasMode1[r1Index];
+      /* AGREGAMOS EL VAGÓN 🚃 AL LADO DEL NÚMERO DE META EN CADA RONDA */
+      document.getElementById('target-count-text').innerText = `Meta: ${data.meta} 🚃`;
+      document.getElementById('train1').style.left = '30px';
+
+      // Render vagones iniciales
+      const container = document.getElementById('wagons-container');
+      container.innerHTML = '<div class="wagon">🦖</div>';
+      for(let i = 1; i < data.inicio; i++) {
+        container.innerHTML += '<div class="wagon">🚃</div>';
+      }
+
+      // Render opciones
+      const optContainer = document.getElementById('options-mode1');
+      optContainer.innerHTML = '';
+      data.opciones.forEach(opc => {
+        const card = document.createElement('div');
+        card.className = 'card-option';
+        card.innerText = opc;
+        card.onclick = () => selectMode1(opc.includes(`+${data.agrega}`));
+        optContainer.appendChild(card);
+      });
+    }
+
+    function selectMode1(isCorrect) {
+      if(isCorrect) {
+        const data = rondasMode1[r1Index];
+        const container = document.getElementById('wagons-container');
+        container.innerHTML += '<div class="wagon">🚃</div>'; // Agrega vagón acumulado
+        
+        document.getElementById('train1').style.left = '500px';
+        document.getElementById('options-mode1').innerHTML = '';
+
+        setTimeout(() => {
+          document.getElementById('sparkles').style.display = 'block';
+          document.getElementById('phrase-text').innerText = `¡LLEGASTE A ${data.meta}!`;
+          document.getElementById('celebration-banner').style.display = 'block';
+        }, 800);
+      }
+    }
+
+    /* MODO 2: LÓGICA DE PATRONES */
+    function loadMode2() {
+      const data = rondasMode2[r2Index];
+      document.getElementById('pattern-display').innerText = data.secuencia;
+      document.getElementById('train2').style.left = '30px';
+
+      const optContainer = document.getElementById('options-mode2');
+      optContainer.innerHTML = '';
+      data.opciones.forEach(opc => {
+        const card = document.createElement('div');
+        card.className = 'card-option';
+        card.style.fontSize = '35px';
+        card.innerText = opc;
+        card.onclick = () => selectMode2(opc === data.correcta);
+        optContainer.appendChild(card);
+      });
+    }
+
+    function selectMode2(isCorrect) {
+      if(isCorrect) {
+        document.getElementById('train2').style.left = '500px';
+        document.getElementById('options-mode2').innerHTML = '';
+
+        setTimeout(() => {
+          document.getElementById('sparkles').style.display = 'block';
+          document.getElementById('phrase-text').innerText = '¡PATRÓN COMPLETO!';
+          document.getElementById('celebration-banner').style.display = 'block';
+        }, 800);
+      }
+    }
+
+    function nextRound() {
+      document.getElementById('celebration-banner').style.display = 'none';
+      document.getElementById('sparkles').style.display = 'none';
+
+      if(activeMode === 'mode1') {
+        r1Index = (r1Index + 1) % rondasMode1.length;
+        loadMode1();
+      } else {
+        r2Index = (r2Index + 1) % rondasMode2.length;
+        loadMode2();
+      }
+    }
+
+    /* PAUSA CALMANTE */
+    let clicksLeft = 3;
+    function openCalmModal() {
+      clicksLeft = 3;
+      document.getElementById('calm-clicks').innerText = clicksLeft;
+      document.getElementById('calm-modal').style.display = 'flex';
+    }
+    function pressCalm() {
+      clicksLeft--;
+      document.getElementById('calm-clicks').innerText = clicksLeft;
+      if (clicksLeft <= 0) {
+        document.getElementById('calm-modal').style.display = 'none';
+      }
+    }
+
+    // Inicializar
+    loadMode1();
+  </script>
+</body>
+</html>
